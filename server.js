@@ -19,9 +19,9 @@ const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/khushu_admin')
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
-    console.log('Connected to MongoDB successfully');
+    console.log('Connected to MongoDB Atlas successfully');
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);

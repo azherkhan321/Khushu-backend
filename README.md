@@ -14,7 +14,7 @@ A Node.js backend API for the Khushu Admin Dashboard with MongoDB integration.
 ## Prerequisites
 
 - Node.js (v14 or higher)
-- MongoDB (local installation or MongoDB Atlas)
+- MongoDB Atlas (configured)
 - npm or yarn
 
 ## Installation
@@ -27,11 +27,11 @@ npm install
 2. Create a `config.env` file in the root directory:
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/khushu_admin
+MONGODB_URI=mongodb+srv://mustafa010amin:EiXucLRIGLvOgEfC@cluster0.9ba5s9b.mongodb.net/khushu_admin?retryWrites=true&w=majority&appName=Cluster0
 NODE_ENV=development
 ```
 
-3. Start MongoDB service (if using local MongoDB)
+3. MongoDB Atlas is configured and ready to use
 
 4. Run the development server:
 ```bash
@@ -122,7 +122,14 @@ The API returns consistent error responses:
 
 ## Development
 
-- Server runs on `http://localhost:5000`
-- MongoDB connection: `mongodb://localhost:27017/khushu_admin`
+- Server runs on `http://localhost:5000` (development)
+- Live server: `https://khushu-backend.onrender.com`
+- MongoDB Atlas: `cluster0.9ba5s9b.mongodb.net/khushu_admin`
 - Hot reload with nodemon
-- CORS enabled for frontend integration 
+- CORS enabled for frontend integration
+
+## Production
+
+- Backend API: `https://khushu-backend.onrender.com`
+- Frontend: `https://khushu.com`
+- Environment variables are configured for production deployment 
