@@ -27,12 +27,7 @@ const productSchema = new mongoose.Schema({
     min: [0, 'Stock cannot be negative'],
     default: 0
   },
-  category: {
-    type: String,
-    required: [true, 'Product category is required'],
-    trim: true,
-    maxlength: [50, 'Category name cannot exceed 50 characters']
-  },
+
   isActive: {
     type: Boolean,
     default: true
