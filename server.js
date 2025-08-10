@@ -35,16 +35,18 @@ app.get('/', (req, res) => {
 // Get all products with pagination
 app.get('/api/products', async (req, res) => {
   try {
-    const Product = require('./models/Product');
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
+    // Validate pagination query params
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit) || 12, 1);
     const skip = (page - 1) * limit;
 
+    // Fetch products with pagination
     const products = await Product.find({ isActive: true })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
+    // Count total active products
     const total = await Product.countDocuments({ isActive: true });
 
     res.status(200).json({
@@ -57,6 +59,8 @@ app.get('/api/products', async (req, res) => {
       hasPrevPage: page > 1
     });
   } catch (error) {
+    console.error('Error fetching products:', error);
+
     res.status(500).json({
       success: false,
       message: 'Error fetching products',

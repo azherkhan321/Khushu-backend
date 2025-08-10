@@ -10,7 +10,7 @@ const productSchema = new mongoose.Schema({
   description: {
     type: String,
     required: [true, 'Product description is required'],
-    maxlength: [1000, 'Product description cannot exceed 1000 characters']
+    maxlength: [2000, 'Product description cannot exceed 2000 characters']
   },
   images: [{
     type: String,
@@ -26,6 +26,12 @@ const productSchema = new mongoose.Schema({
     required: [true, 'Product stock is required'],
     min: [0, 'Stock cannot be negative'],
     default: 0
+  },
+  category: {
+    type: String,
+    required: [true, 'Product category is required'],
+    trim: true,
+    maxlength: [50, 'Category name cannot exceed 50 characters']
   },
   isActive: {
     type: Boolean,
