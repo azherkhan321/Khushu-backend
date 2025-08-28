@@ -180,23 +180,33 @@ app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
 
 app.get('/api/products/:id', async (req, res) => {
   try {
-    const Product = require('./models/Product');
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).lean(); // lean() returns plain JS object
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    // Convert buffer -> base64
-    const productData = product.toObject();
-    productData.images = product.images.map(img => {
+    // Ensure images array exists
+    const images = (product.images || []).map(img => {
       if (img?.data) {
-        return `data:${img.contentType};base64,${img.data.toString('base64')}`;
+        // Convert Buffer or Array to Base64 string
+        let bufferData;
+        if (Buffer.isBuffer(img.data)) {
+          bufferData = img.data;
+        } else if (img.data.data) {
+          // If data is stored as { type: "Buffer", data: [...] }
+          bufferData = Buffer.from(img.data.data);
+        } else {
+          return null;
+        }
+        return `data:${img.contentType};base64,${bufferData.toString('base64')}`;
       }
       return null;
     }).filter(Boolean);
 
-    res.status(200).json({ success: true, data: productData });
+    product.images = images;
+
+    res.status(200).json({ success: true, data: product });
   } catch (error) {
     console.error("Error fetching product:", error);
     res.status(500).json({ success: false, message: 'Server error' });
