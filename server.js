@@ -178,8 +178,8 @@ app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
 
 
 
-// Get single product
-  app.get('/api/products/:id', async (req, res) => {
+app.get('/api/products/:id', async (req, res) => {
+  try {
     const Product = require('./models/Product');
     const product = await Product.findById(req.params.id);
 
@@ -190,14 +190,20 @@ app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
     // Convert buffer -> base64
     const productData = product.toObject();
     productData.images = product.images.map(img => {
-      if (img.data) {
+      if (img?.data) {
         return `data:${img.contentType};base64,${img.data.toString('base64')}`;
       }
       return null;
-    });
+    }).filter(Boolean);
 
     res.status(200).json({ success: true, data: productData });
-  });
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
 
 
 // Update product
