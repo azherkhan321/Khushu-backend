@@ -176,39 +176,41 @@ app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
   });
 });
 
-
+const Product = require('./models/Product');
 
 app.get('/api/products/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).lean(); // lean() returns plain JS object
+    const product = await Product.findById(req.params.id).lean(); // returns plain JS object
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const images = (product.images || []).map(img => {
-      if (img?.data) {
-        // Convert MongoDB Binary to Buffer
-        let bufferData;
-        if (Buffer.isBuffer(img.data)) {
-          bufferData = img.data;
-        } else if (img.data && img.data.buffer) {
-          bufferData = Buffer.from(img.data.buffer); // Use the underlying ArrayBuffer
-        } else if (img.data && img.data._bsontype === 'Binary') {
-          bufferData = Buffer.from(img.data.buffer); // For Binary type from MongoDB
-        } else if (img.data.data) {
-          bufferData = Buffer.from(img.data.data); // fallback
-        } else {
-          return null;
-        }
-    
-        return `data:${img.contentType};base64,${bufferData.toString('base64')}`;
+    // Convert MongoDB Binary to Base64
+    product.images = (product.images || []).map(img => {
+      if (!img?.data) return null;
+
+      let bufferData;
+
+      // If img.data is a Buffer
+      if (Buffer.isBuffer(img.data)) {
+        bufferData = img.data;
+      } 
+      // If img.data is MongoDB Binary object
+      else if (img.data.buffer) {
+        bufferData = Buffer.from(img.data.buffer);
+      } 
+      // fallback for older formats
+      else if (img.data.data) {
+        bufferData = Buffer.from(img.data.data);
+      } 
+      else {
+        return null;
       }
-      return null;
+
+      // Return valid Base64 string
+      return `data:${img.contentType};base64,${bufferData.toString('base64')}`;
     }).filter(Boolean);
-    
-    product.images = images;
-    
 
     res.status(200).json({ success: true, data: product });
   } catch (error) {
