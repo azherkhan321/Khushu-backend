@@ -189,21 +189,13 @@ app.get('/api/products/:id', async (req, res) => {
     // Ensure images array exists
     const images = (product.images || []).map(img => {
       if (img?.data) {
-        // Convert Buffer or Array to Base64 string
-        let bufferData;
-        if (Buffer.isBuffer(img.data)) {
-          bufferData = img.data;
-        } else if (img.data.data) {
-          // If data is stored as { type: "Buffer", data: [...] }
-          bufferData = Buffer.from(img.data.data);
-        } else {
-          return null;
-        }
+        // ensure Buffer
+        const bufferData = Buffer.isBuffer(img.data) ? img.data : Buffer.from(img.data.data);
         return `data:${img.contentType};base64,${bufferData.toString('base64')}`;
       }
       return null;
     }).filter(Boolean);
-
+    
     product.images = images;
 
     res.status(200).json({ success: true, data: product });
