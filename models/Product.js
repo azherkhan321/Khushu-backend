@@ -12,11 +12,15 @@ const productSchema = new mongoose.Schema({
     required: [true, 'Product description is required'],
     maxlength: [2000, 'Product description cannot exceed 2000 characters']
   },
-  images: [{
-    data: Buffer,
-    contentType: String,
+  images: {
+    type: [
+      {
+        data: Buffer,
+        contentType: String
+      }
+    ],
     required: [true, 'At least one product image is required']
-  }],
+  },  
   price: {
     type: Number,
     required: [true, 'Product price is required'],
