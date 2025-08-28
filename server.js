@@ -178,7 +178,6 @@ app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
 
 
 
-// Get single product
 app.get('/api/products/:id', async (req, res) => {
   try {
     const Product = require('./models/Product');
@@ -195,7 +194,7 @@ app.get('/api/products/:id', async (req, res) => {
         return `data:${img.contentType};base64,${img.data.toString('base64')}`;
       }
       return null;
-    }).filter(Boolean); // remove nulls if any
+    }).filter(Boolean);
 
     res.status(200).json({ success: true, data: productData });
   } catch (error) {
@@ -203,6 +202,8 @@ app.get('/api/products/:id', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+
 
 
 // Update product
