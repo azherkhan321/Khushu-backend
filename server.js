@@ -186,17 +186,29 @@ app.get('/api/products/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    // Ensure images array exists
     const images = (product.images || []).map(img => {
       if (img?.data) {
-        // ensure Buffer
-        const bufferData = Buffer.isBuffer(img.data) ? img.data : Buffer.from(img.data.data);
+        // Convert MongoDB Binary to Buffer
+        let bufferData;
+        if (Buffer.isBuffer(img.data)) {
+          bufferData = img.data;
+        } else if (img.data && img.data.buffer) {
+          bufferData = Buffer.from(img.data.buffer); // Use the underlying ArrayBuffer
+        } else if (img.data && img.data._bsontype === 'Binary') {
+          bufferData = Buffer.from(img.data.buffer); // For Binary type from MongoDB
+        } else if (img.data.data) {
+          bufferData = Buffer.from(img.data.data); // fallback
+        } else {
+          return null;
+        }
+    
         return `data:${img.contentType};base64,${bufferData.toString('base64')}`;
       }
       return null;
     }).filter(Boolean);
     
     product.images = images;
+    
 
     res.status(200).json({ success: true, data: product });
   } catch (error) {
