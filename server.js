@@ -122,89 +122,83 @@ app.get('/api/products/search/:query', async (req, res) => {
 
 const { requireAuth, requireAdmin } = require('./middleware/auth');
 
-// Create product route
-app.post('/api/products', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const upload = require('./middleware/upload');
-    
-    // Use multer middleware
-    upload.array('images', 10)(req, res, async (err) => {
-      if (err) {
+const upload = require('./middleware/upload'); // adjust path as needed
+
+app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
+  const Product = require('./models/Product');
+
+  upload.array('images', 10)(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: 'File upload error',
+        error: err.message
+      });
+    }
+
+    try {
+      const { name, description, price, stock } = req.body;
+
+      if (!req.files || req.files.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'File upload error',
-          error: err.message
+          message: 'At least one image is required'
         });
       }
 
-      try {
-        const { name, description, price, stock } = req.body;
+      // Convert uploaded files to Buffers
+      const images = req.files.map(file => ({
+        data: file.buffer,
+        contentType: file.mimetype
+      }));
 
-        // Check if images were uploaded
-        if (!req.files || req.files.length === 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'At least one image is required'
-          });
-        }
+      const product = await Product.create({
+        name,
+        description,
+        price: parseFloat(price),
+        stock: parseInt(stock),
+        images
+      });
 
-        // Create image URLs
-        const images = req.files.map(file => `/uploads/${file.filename}`);
+      res.status(201).json({
+        success: true,
+        message: 'Product created successfully',
+        data: product
+      });
 
-        const product = await Product.create({
-          name,
-          description,
-          images,
-          price: parseFloat(price),
-          stock: parseInt(stock)
-        });
-
-        res.status(201).json({
-          success: true,
-          message: 'Product created successfully',
-          data: product
-        });
-      } catch (error) {
-        res.status(400).json({
-          success: false,
-          message: 'Error creating product',
-          error: error.message
-        });
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: 'Error creating product',
+        error: error.message
+      });
+    }
+  });
 });
+
+
 
 // Get single product
 app.get('/api/products/:id', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-    res.status(200).json({
-      success: true,
-      data: product
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching product',
-      error: error.message
-    });
+  const Product = require('./models/Product');
+  const product = await Product.findById(req.params.id);
+
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
   }
+
+  // Convert buffer -> base64
+  const productData = product.toObject();
+  productData.images = product.images.map(img => {
+    if (img.data) {
+      return `data:${img.contentType};base64,${img.data.toString('base64')}`;
+    }
+    return null;
+  });
+
+  res.status(200).json({ success: true, data: productData });
 });
+
 
 // Update product
 app.put('/api/products/:id', requireAuth, requireAdmin, async (req, res) => {
