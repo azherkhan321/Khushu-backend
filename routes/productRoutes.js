@@ -31,7 +31,8 @@ const toDataUrlProduct = (product) => {
         return img;
       }
       if (img.data && img.contentType) {
-        const base64 = Buffer.from(img.data).toString('base64');
+        const buffer = Buffer.isBuffer(img.data) ? img.data : Buffer.from(img.data);
+        const base64 = buffer.toString('base64');
         return `data:${img.contentType};base64,${base64}`;
       }
       return '';
