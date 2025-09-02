@@ -132,94 +132,102 @@ app.get('/api/products/search/:query', async (req, res) => {
 
 const { requireAuth, requireAdmin } = require('./middleware/auth');
 
-// Create product route
-app.post('/api/products', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const upload = require('./middleware/upload');
-    
-    // Use multer middleware
-    upload.array('images', 10)(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: 'File upload error',
-          error: err.message
-        });
-      }
+const upload = require('./middleware/upload'); // adjust path as needed
 
-      try {
-        const { name, description, price, stock } = req.body;
+app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
+  const Product = require('./models/Product');
 
-        // Check if images were uploaded
-        if (!req.files || req.files.length === 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'At least one image is required'
-          });
-        }
-
-        // Helper to build absolute base URL
-        const protocol = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0];
-        const host = req.get('host');
-        const baseUrl = `${protocol}://${host}`;
-
-        // Create absolute image URLs (works on live server)
-        const images = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
-
-        const product = await Product.create({
-          name,
-          description,
-          images,
-          price: parseFloat(price),
-          stock: parseInt(stock)
-        });
-
-        res.status(201).json({
-          success: true,
-          message: 'Product created successfully',
-          data: product
-        });
-      } catch (error) {
-        res.status(400).json({
-          success: false,
-          message: 'Error creating product',
-          error: error.message
-        });
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-});
-
-// Get single product
-app.get('/api/products/:id', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({
+  upload.array('images', 10)(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({
         success: false,
-        message: 'Product not found'
+        message: 'File upload error',
+        error: err.message
       });
     }
-    res.status(200).json({
-      success: true,
-      data: product
-    });
+
+    try {
+      const { name, description, price, stock } = req.body;
+
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one image is required'
+        });
+      }
+
+        // Create image URLs
+        const images = req.files.map(file => `/uploads/${file.filename}`);
+
+      const product = await Product.create({
+        name,
+        description,
+        price: parseFloat(price),
+        stock: parseInt(stock),
+        images
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Product created successfully',
+        data: product
+      });
+
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: 'Error creating product',
+        error: error.message
+      });
+    }
+  });
+});
+
+const Product = require('./models/Product');
+
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).lean(); // returns plain JS object
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Convert MongoDB Binary to Base64
+    product.images = (product.images || []).map(img => {
+      if (!img?.data) return null;
+
+      let bufferData;
+
+      // If img.data is a Buffer
+      if (Buffer.isBuffer(img.data)) {
+        bufferData = img.data;
+      } 
+      // If img.data is MongoDB Binary object
+      else if (img.data.buffer) {
+        bufferData = Buffer.from(img.data.buffer);
+      } 
+      // fallback for older formats
+      else if (img.data.data) {
+        bufferData = Buffer.from(img.data.data);
+      } 
+      else {
+        return null;
+      }
+
+      // Return valid Base64 string
+      return `data:${img.contentType};base64,${bufferData.toString('base64')}`;
+    }).filter(Boolean);
+
+    res.status(200).json({ success: true, data: product });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching product',
-      error: error.message
-    });
+    console.error("Error fetching product:", error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+
+
 
 // Update product
 app.put('/api/products/:id', requireAuth, requireAdmin, async (req, res) => {
