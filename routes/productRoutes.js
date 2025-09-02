@@ -269,11 +269,17 @@ router.put('/:id', requireAuth, requireAdmin, upload.array('images', 10), async 
 // Delete product (soft delete)
 router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
+    const hard = String(req.query.hard || '').toLowerCase() === 'true';
+    let product;
+    if (hard) {
+      product = await Product.findByIdAndDelete(req.params.id);
+    } else {
+      product = await Product.findByIdAndUpdate(
+        req.params.id,
+        { isActive: false },
+        { new: true }
+      );
+    }
 
     if (!product) {
       return res.status(404).json({
@@ -284,7 +290,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Product deleted successfully'
+      message: hard ? 'Product hard-deleted successfully' : 'Product deleted successfully'
     });
   } catch (error) {
     res.status(500).json({
