@@ -9,6 +9,35 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 // Convert product document images to data URLs for transport
 const toDataUrlProduct = (product) => {
   const obj = product.toObject ? product.toObject() : product;
+  const extractBase64 = (data) => {
+    try {
+      if (!data) return '';
+      if (Buffer.isBuffer(data)) {
+        return data.toString('base64');
+      }
+      if (data && typeof data.toString === 'function') {
+        try {
+          const b64 = data.toString('base64');
+          if (b64 && b64.length > 0 && /^[A-Za-z0-9+/=]+$/.test(b64)) return b64;
+        } catch (_) {}
+      }
+      if (data && data.buffer) {
+        return Buffer.from(data.buffer).toString('base64');
+      }
+      if (data && data._bsontype === 'Binary' && typeof data.toBase64 === 'function') {
+        return data.toBase64();
+      }
+      if (Array.isArray(data)) {
+        return Buffer.from(Uint8Array.from(data)).toString('base64');
+      }
+      if (data && data.data && Array.isArray(data.data)) {
+        return Buffer.from(Uint8Array.from(data.data)).toString('base64');
+      }
+      return '';
+    } catch (e) {
+      return '';
+    }
+  };
   if (Array.isArray(obj.images)) {
     obj.images = obj.images.map((img) => {
       if (!img) return '';
@@ -32,26 +61,8 @@ const toDataUrlProduct = (product) => {
       }
       if (img.data) {
         const contentType = img.contentType || 'image/jpeg';
-        let buffer;
-        if (Buffer.isBuffer(img.data)) {
-          buffer = img.data;
-        } else if (img.data && Array.isArray(img.data)) {
-          buffer = Buffer.from(img.data);
-        } else if (img.data && img.data.data && Array.isArray(img.data.data)) {
-          buffer = Buffer.from(img.data.data);
-        } else if (img.data instanceof Uint8Array) {
-          buffer = Buffer.from(img.data);
-        } else {
-          try {
-            buffer = Buffer.from(img.data);
-          } catch (e) {
-            buffer = null;
-          }
-        }
-        if (buffer) {
-          const base64 = buffer.toString('base64');
-          return `data:${contentType};base64,${base64}`;
-        }
+        const base64 = extractBase64(img.data);
+        if (base64) return `data:${contentType};base64,${base64}`;
       }
       return '';
     });
