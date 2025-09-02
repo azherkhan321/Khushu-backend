@@ -30,10 +30,28 @@ const toDataUrlProduct = (product) => {
         }
         return img;
       }
-      if (img.data && img.contentType) {
-        const buffer = Buffer.isBuffer(img.data) ? img.data : Buffer.from(img.data);
-        const base64 = buffer.toString('base64');
-        return `data:${img.contentType};base64,${base64}`;
+      if (img.data) {
+        const contentType = img.contentType || 'image/jpeg';
+        let buffer;
+        if (Buffer.isBuffer(img.data)) {
+          buffer = img.data;
+        } else if (img.data && Array.isArray(img.data)) {
+          buffer = Buffer.from(img.data);
+        } else if (img.data && img.data.data && Array.isArray(img.data.data)) {
+          buffer = Buffer.from(img.data.data);
+        } else if (img.data instanceof Uint8Array) {
+          buffer = Buffer.from(img.data);
+        } else {
+          try {
+            buffer = Buffer.from(img.data);
+          } catch (e) {
+            buffer = null;
+          }
+        }
+        if (buffer) {
+          const base64 = buffer.toString('base64');
+          return `data:${contentType};base64,${base64}`;
+        }
       }
       return '';
     });
