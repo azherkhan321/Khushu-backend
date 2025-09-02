@@ -11,6 +11,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Trust proxy to correctly detect HTTPS and host when behind a reverse proxy (e.g., Render, Vercel)
+app.set('trust proxy', 1);
+
+// Ensure uploads directory exists in production as well
+const fs = require('fs');
+const uploadsDirPath = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDirPath)) {
+  fs.mkdirSync(uploadsDirPath, { recursive: true });
+}
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -149,8 +159,13 @@ app.post('/api/products', requireAuth, requireAdmin, async (req, res) => {
           });
         }
 
-        // Create image URLs
-        const images = req.files.map(file => `/uploads/${file.filename}`);
+        // Helper to build absolute base URL
+        const protocol = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0];
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+
+        // Create absolute image URLs (works on live server)
+        const images = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
 
         const product = await Product.create({
           name,
@@ -233,7 +248,10 @@ app.put('/api/products/:id', requireAuth, requireAdmin, async (req, res) => {
 
         // If new images are uploaded, add them to existing images
         if (req.files && req.files.length > 0) {
-          const newImages = req.files.map(file => `/uploads/${file.filename}`);
+          const protocol = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0];
+          const host = req.get('host');
+          const baseUrl = `${protocol}://${host}`;
+          const newImages = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
           
           // Get existing product to merge images
           const existingProduct = await Product.findById(req.params.id);
