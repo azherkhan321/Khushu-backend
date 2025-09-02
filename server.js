@@ -156,8 +156,13 @@ app.post('/api/products', requireAuth, requireAdmin, (req, res) => {
         });
       }
 
-        // Create image URLs
-        const images = req.files.map(file => `/uploads/${file.filename}`);
+      // Build absolute base URL for live usage
+      const protocol = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0];
+      const host = req.get('host');
+      const baseUrl = `${protocol}://${host}`;
+
+      // Create absolute image URLs
+      const images = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
 
       const product = await Product.create({
         name,
@@ -187,42 +192,13 @@ const Product = require('./models/Product');
 
 app.get('/api/products/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).lean(); // returns plain JS object
-
+    const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
-
-    // Convert MongoDB Binary to Base64
-    product.images = (product.images || []).map(img => {
-      if (!img?.data) return null;
-
-      let bufferData;
-
-      // If img.data is a Buffer
-      if (Buffer.isBuffer(img.data)) {
-        bufferData = img.data;
-      } 
-      // If img.data is MongoDB Binary object
-      else if (img.data.buffer) {
-        bufferData = Buffer.from(img.data.buffer);
-      } 
-      // fallback for older formats
-      else if (img.data.data) {
-        bufferData = Buffer.from(img.data.data);
-      } 
-      else {
-        return null;
-      }
-
-      // Return valid Base64 string
-      return `data:${img.contentType};base64,${bufferData.toString('base64')}`;
-    }).filter(Boolean);
-
     res.status(200).json({ success: true, data: product });
   } catch (error) {
-    console.error("Error fetching product:", error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Error fetching product', error: error.message });
   }
 });
 
